@@ -22,9 +22,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    environment:
+    environment: &importer_environment
       DATABASE_URL: "postgresql://reviews:${POSTGRES_PASSWORD}@db:5432/reviews"
       GOOGLE_LOCATION: ${GOOGLE_LOCATION}
-      GOOGLE_ACCESS_TOKEN: ${GOOGLE_ACCESS_TOKEN}
+      GOOGLE_ACCESS_TOKEN: ${GOOGLE_ACCESS_TOKEN:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REFRESH_TOKEN: ${GOOGLE_REFRESH_TOKEN:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+  daily-importer:
+    build: .
+    profiles: ["daily"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: *importer_environment
+    restart: unless-stopped
+    command: ["sh", "-c", "while true; do python data/scrapping/reviews/main.py || echo 'Importação falhou; nova tentativa em 24 horas' >&2; sleep 86400; done"]
 volumes:
   postgres_data:

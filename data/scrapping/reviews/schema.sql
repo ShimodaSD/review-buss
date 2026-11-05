@@ -24,3 +24,29 @@ CREATE TABLE IF NOT EXISTS google_review_media (
     video_url text,
     PRIMARY KEY (review_name, position)
 );
+
+CREATE TABLE IF NOT EXISTS reviews (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    source text NOT NULL,
+    source_id text NOT NULL,
+    comment text,
+    created_at timestamptz,
+    source_url text,
+    UNIQUE (source, source_id)
+);
+
+-- Include Google reviews imported before the unified table existed.
+INSERT INTO reviews (source, source_id, comment, created_at)
+SELECT 'google', name, comment, created_at FROM google_reviews
+ON CONFLICT (source, source_id) DO UPDATE SET
+    comment = EXCLUDED.comment, created_at = EXCLUDED.created_at;
+
+
+CREATE TABLE IF NOT EXISTS google_review_sync (
+    location text PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS telegram_review_notifications (
+    review_name text PRIMARY KEY REFERENCES google_reviews(name) ON DELETE CASCADE,
+    sent_at timestamptz
+);
